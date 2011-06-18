@@ -32,7 +32,8 @@ has tlon => (
 
 has fast => (
     is            => 'ro',
-    isa           => 'Str',
+    isa           => 'Int',
+    required      => 1,
     documentation => '',
 );
 
@@ -40,6 +41,7 @@ has fast => (
 has v => (
     is            => 'ro',
     isa           => 'Str',
+    required      => 1,
     documentation => '',
 );
 

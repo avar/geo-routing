@@ -8,6 +8,8 @@ my $route = Geo::Gosmore::Route->new(
     flon => '-0.111',
     tlat => '51.5614',
     tlon => '-0.0466',
+    fast => 1,
+    v    => 'motorcar',
 );
 
 isa_ok $route, "Geo::Gosmore::Route";
