@@ -17,7 +17,7 @@ isa_ok $query, "Geo::Gosmore::Query";
 cmp_ok $query->query_string, 'eq', 'flat=51.5425&flon=-0.111&tlat=51.5614&tlon=-0.0466&fast=1&v=motorcar', "We can generate a string";
 
 my $gosmore = Geo::Gosmore->new(
-    gosmore_path => "/home/avar/g/gosmore",
+    gosmore_pak => '/home/avar/osm/gosmore.pak'
 );
 
 isa_ok $gosmore, "Geo::Gosmore";
