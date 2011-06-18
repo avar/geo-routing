@@ -7,7 +7,7 @@ use Geo::Gosmore::Query;
 my $gosmore_pak = $ENV{GOSMORE_PAK};
 
 plan skip_all => "You need a gosmore.pak" unless defined $gosmore_pak and -f $gosmore_pak;
-plan tests => 10;
+plan tests => 12;
 
 my $gosmore = Geo::Gosmore->new(
     gosmore_pak => $gosmore_pak,
@@ -27,6 +27,11 @@ my @from_to = (
 
             ($distance >= 8 && $distance <= 10);
         },
+        travel_time_ok => sub {
+            my ($travel_time) = @_;
+
+            ($travel_time >= 300 && $travel_time <= 400);
+        },
     },
     {
         args => {
@@ -39,6 +44,11 @@ my @from_to = (
             my ($distance) = @_;
 
             ($distance >= 200 && $distance <= 230);
+        },
+        travel_time_ok => sub {
+            my ($travel_time) = @_;
+
+            ($travel_time >= 5000 && $travel_time <= 7000);
         },
     },
     {
@@ -74,8 +84,12 @@ ROUTE: for my $from_to (@from_to) {
         next ROUTE;
     }
 
-    my $distance = $route->distance;
 
-    my $distance_ok = $from_to->{distance_ok}->($distance);
-    ok($distance_ok, "Got the distance of <$distance> for a route");
+    for my $value (qw(distance travel_time)) {
+        if (my $callback = $from_to->{"${value}_ok"}) {
+            my $got = $route->$value;
+            my $got_ok = $callback->($got);
+            ok($got_ok, "Got the $value of <$got> for a route, which was within bounds");
+        }
+    }
 }
