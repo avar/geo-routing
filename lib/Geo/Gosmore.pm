@@ -115,6 +115,7 @@ sub route {
     return $route;
 }
 
+1;
 
 =head1 LICENSE AND COPYRIGHT
 
