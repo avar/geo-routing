@@ -86,6 +86,7 @@ sub route {
     my $query_string = $query->query_string;
 
     local $ENV{QUERY_STRING} = $query_string;
+    local $ENV{LC_NUMERIC} = "en_US";
     my $current_dirname = getcwd();
     chdir $gosmore_dirname;
     open my $gosmore, "gosmore |";
