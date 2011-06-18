@@ -102,6 +102,8 @@ sub route {
         # We couldn't find a route
         return if $line eq 'No route found';
 
+        print STDERR "$line\n" if $ENV{DEBUG};
+
         # We're getting a stream of lat/lon values
         next unless $line =~ /^[0-9]/;
 
