@@ -39,6 +39,8 @@ your new F<gosmore.pak>.
         fast => 1,
         v    => 'motorcar',
     );
+
+    # Returns false if we can't find a route
     my $route = $gosmore->find_route($query);
     my $distance = $route->distance;
 
