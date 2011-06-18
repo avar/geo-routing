@@ -1,9 +1,10 @@
 use Any::Moose;
 use warnings FATAL => "all";
 use Test::More qw(no_plan);
-use Geo::Gosmore::Route;
+use Geo::Gosmore;
+use Geo::Gosmore::Query;
 
-my $route = Geo::Gosmore::Route->new(
+my $query = Geo::Gosmore::Query->new(
     flat => '51.5425',
     flon => '-0.111',
     tlat => '51.5614',
@@ -12,7 +13,14 @@ my $route = Geo::Gosmore::Route->new(
     v    => 'motorcar',
 );
 
-isa_ok $route, "Geo::Gosmore::Route";
+isa_ok $query, "Geo::Gosmore::Query";
+cmp_ok $query->query_string, 'eq', 'flat=51.5425&flon=-0.111&tlat=51.5614&tlon=-0.0466&fast=1&v=motorcar', "We can generate a string";
 
-warn $route->query_string;
+my $gosmore = Geo::Gosmore->new(
+    gosmore_path => "/home/avar/g/gosmore",
+    query        => $query,
+);
 
+isa_ok $gosmore, "Geo::Gosmore";
+
+my $route = $gosmore->route;

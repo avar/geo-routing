@@ -1,4 +1,4 @@
-package Geo::Gosmore::Route;
+package Geo::Gosmore::Query;
 use Any::Moose;
 use warnings FATAL => "all";
 
