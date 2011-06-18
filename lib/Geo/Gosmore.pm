@@ -105,8 +105,8 @@ sub route {
         # We're getting a stream of lat/lon values
         next unless $line =~ /^[0-9]/;
 
-        my ($lat, $lon, $junction_type, $style, $heap_idx, $name) = split /,/, $line;
-        push @points => [ $lat, $lon, $junction_type, $style, $heap_idx, $name ];
+        my ($lat, $lon, $junction_type, $style, $remaining_time, $name) = split /,/, $line;
+        push @points => [ $lat, $lon, $junction_type, $style, $remaining_time, $name ];
     }
 
     my $route = Geo::Gosmore::Route->new(
