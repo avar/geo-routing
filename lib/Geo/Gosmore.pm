@@ -10,7 +10,7 @@ use Cwd qw(getcwd);
 
 =head1 NAME
 
-Geo::Gosmore - Interface to the headless L<gosmore(1)>
+Geo::Gosmore - Interface to the headless L<gosmore(1)> routing application
 
 =head1 SYNOPSIS
 
@@ -41,7 +41,7 @@ your new F<gosmore.pak>.
     );
 
     # Returns false if we can't find a route
-    my $route = $gosmore->find_route($query);
+    my $route = $gosmore->route($query);
     my $distance = $route->distance;
 
 =head1 DESCRIPTION
@@ -79,7 +79,7 @@ sub _build_gosmore_dirname {
     return $gosmore_dirname;
 }
 
-sub find_route {
+sub route {
     my ($self, $query) = @_;
 
     my $gosmore_dirname = $self->gosmore_dirname;

@@ -67,7 +67,7 @@ ROUTE: for my $from_to (@from_to) {
     my $qs = "flat=${flat}&flon=${flon}&tlat=${tlat}&tlon=${tlon}&fast=1&v=motorcar";
     cmp_ok $query->query_string, 'eq', $qs, qq[QUERY_STRING="$qs" gosmore];
 
-    my $route = $gosmore->find_route($query);
+    my $route = $gosmore->route($query);
 
     if ($from_to->{no_route}) {
         ok(!$route, "We can't find a route");
