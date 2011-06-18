@@ -91,7 +91,15 @@ sub find_route {
 
     my @points;
     while (my $line = <$gosmore>) {
+        # Skip the HTTP header
+        next if $. == 1 || $. == 2;
+
         $line =~ s/[[:cntrl:]]//g;
+
+        # We couldn't find a route
+        return if $line eq 'No route found';
+
+        # We're getting a stream of lat/lon values
         next unless $line =~ /^[0-9]/;
 
         my ($lat, $lon, undef, $style, undef, $name) = split /,/, $line;
