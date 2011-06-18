@@ -18,9 +18,12 @@ cmp_ok $query->query_string, 'eq', 'flat=51.5425&flon=-0.111&tlat=51.5614&tlon=-
 
 my $gosmore = Geo::Gosmore->new(
     gosmore_path => "/home/avar/g/gosmore",
-    query        => $query,
 );
 
 isa_ok $gosmore, "Geo::Gosmore";
 
-my $route = $gosmore->route;
+my $route = $gosmore->find_route($query);
+my $distance = $route->distance;
+my $distance_ok = ($distance >= 8 && $distance <= 10);
+
+ok($distance_ok, "Got the distance of <$distance> for a route within London");
