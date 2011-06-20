@@ -1,8 +1,9 @@
 use Any::Moose;
 use warnings FATAL => "all";
 use Test::More 'no_plan';
-use Geo::Gosmore;
-use Geo::Gosmore::Query;
+
+use_ok 'Geo::Gosmore';
+use_ok 'Geo::Gosmore::Query';
 
 my @from_to = (
     {
