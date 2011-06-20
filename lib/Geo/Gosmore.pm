@@ -1,10 +1,12 @@
 package Geo::Gosmore;
 use Any::Moose;
+use Any::Moose '::Util::TypeConstraints';
 use warnings FATAL => "all";
 use autodie qw(:all);
 use Geo::Gosmore::Route;
 use File::Basename qw(dirname);
 use Cwd qw(getcwd);
+use WWW::Mechanize;
 
 =encoding utf8
 
@@ -24,11 +26,11 @@ Then build a F<gosmore.pak> file:
     # pv(1) is not needed, it just shows you the import progress
     bzcat british_isles.osm.bz2 | pv | gosmore rebuild
 
-Then use this library, with C<$gosmore_pak> being the full path to
+Then use this library, with C<gosmore_path> being the full path to
 your new F<gosmore.pak>.
 
     my $gosmore = Geo::Gosmore->new(
-        gosmore_pak => $gosmore_pak,
+        gosmore_path => $gosmore_path,
     );
 
     my $query = Geo::Gosmore::Query->new(
@@ -52,53 +54,99 @@ library. When compiled with headless support it provides a simple
 interface to do routing. This library just parses its simple output
 and provides accessors for it.
 
-This is experimental software with an API subject to change.
+We also support accessing the headless L<gosmore(1)> program through a
+remote CGI interface.
+
+=head1 ATTRIBUTES
 
 =cut
 
-has gosmore_pak => (
+enum GosmoreMethod => qw(
+    binary
+    http
+);
+
+=head2 gosmore_method
+
+Either C<binary> or C<http>. If binary L</gosmore_path> is a path to a
+F<gosmore.pak> and we'll invoke L<gosmore(1)> from your C<$PATH>.
+
+If it's C<http> L</gosmore_path> is a URL to an online gosmore router.
+
+=cut
+
+has gosmore_method => (
+    is            => 'ro',
+    isa           => 'GosmoreMethod',
+    required      => 1,
+    default       => "binary",
+    documentation => "The gosmore method to use. Either 'binary' or 'http'",
+);
+
+=head2 gosmore_path
+
+Either a path to a F<gosmore.pak> (see L</gosmore_method>) or a HTTP
+URL to a gosmore CGI routing script without query parameters.
+
+=cut
+
+has gosmore_path => (
     is            => 'ro',
     isa           => 'Str',
     required      => 1,
-    documentation => "The full path to the gosmore.pak file",
+    documentation => "The full path to the gosmore.pak file to use, or a HTTP URL with a gosmore instance we can send queries to",
 );
 
-has gosmore_dirname => (
+has _gosmore_dirname => (
     is            => 'ro',
     isa           => 'Str',
     documentation => "The full path to the directory the gosmore.pak file is in",
     lazy_build    => 1,
 );
 
-sub _build_gosmore_dirname {
+sub _build__gosmore_dirname {
     my ($self) = @_;
 
-    my $gosmore_pak     = $self->gosmore_pak;
-    my $gosmore_dirname = dirname($gosmore_pak);
+    my $gosmore_path    = $self->gosmore_path;
+    my $gosmore_dirname = dirname($gosmore_path);
 
     return $gosmore_dirname;
 }
 
+has _mech => (
+    is            => 'ro',
+    isa           => 'WWW::Mechanize',
+    documentation => "Our instance of WWW::Mechanize",
+    lazy_build    => 1,
+);
+
+sub _build__mech {
+    my ($self) = @_;
+
+    WWW::Mechanize->new(
+        user_agent => __PACKAGE__,
+    );
+}
+
+=head1 METHODS
+
+=cut
+
+=head2 route
+
+Find a route based on the L<attributes|/ATTRIBUTES> you've passed
+in. Takes a L<Geo::Gosmore::Query> object with your query, returns a
+L<Geo::Gosmore::Route> object.
+
+=cut
+
 sub route {
     my ($self, $query) = @_;
 
-    my $gosmore_dirname = $self->gosmore_dirname;
-    my $query_string = $query->query_string;
-
-    local $ENV{QUERY_STRING} = $query_string;
-    local $ENV{LC_NUMERIC} = "en_US";
-    my $current_dirname = getcwd();
-    chdir $gosmore_dirname;
-    open my $gosmore, "gosmore |";
-    chdir $current_dirname;
+    my $lines = $self->_get_normalized_routing_lines($query);
 
     my @points;
-    while (my $line = <$gosmore>) {
-        # Skip the HTTP header
-        next if $. == 1 || $. == 2;
-
-        $line =~ s/[[:cntrl:]]//g;
-
+    for my $line (@$lines) {
         # We couldn't find a route
         return if $line eq 'No route found';
 
@@ -116,6 +164,47 @@ sub route {
     );
 
     return $route;
+}
+
+sub _get_normalized_routing_lines {
+    my ($self, $query) = @_;
+
+    my $method = $self->gosmore_method;
+    my @lines;
+
+    my $query_string = $query->query_string;
+    if ($method eq 'binary') {
+        my $gosmore_dirname = $self->_gosmore_dirname;
+
+        local $ENV{QUERY_STRING} = $query_string;
+        local $ENV{LC_NUMERIC} = "en_US";
+        my $current_dirname = getcwd();
+        chdir $gosmore_dirname;
+        open my $gosmore, "gosmore |";
+        chdir $current_dirname;
+
+        while (my $line = <$gosmore>) {
+            # Skip the HTTP header
+            next if $. == 1 || $. == 2;
+
+            $line =~ s/[[:cntrl:]]//g;
+
+            push @lines => $line;
+        }
+
+    } elsif ($method eq 'http') {
+        my $mech = $self->_mech;
+        my $url = sprintf "%s?%s", $self->gosmore_path, $query_string;
+        $mech->get($url);
+        my $content = $mech->content;
+        use Data::Dumper;
+        @lines = map {
+            s/[[:cntrl:]]//g;
+            $_;
+        } split /\n/, $content;
+    }
+
+    return \@lines;
 }
 
 1;

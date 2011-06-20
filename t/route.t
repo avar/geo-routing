@@ -1,18 +1,8 @@
 use Any::Moose;
 use warnings FATAL => "all";
-use Test::More;
+use Test::More 'no_plan';
 use Geo::Gosmore;
 use Geo::Gosmore::Query;
-
-my $gosmore_pak = $ENV{GOSMORE_PAK};
-
-plan skip_all => "You need a gosmore.pak" unless defined $gosmore_pak and -f $gosmore_pak;
-plan tests => 12;
-
-my $gosmore = Geo::Gosmore->new(
-    gosmore_pak => $gosmore_pak,
-);
-isa_ok $gosmore, "Geo::Gosmore";
 
 my @from_to = (
     {
@@ -62,34 +52,66 @@ my @from_to = (
     }
 );
 
-ROUTE: for my $from_to (@from_to) {
-    my $args = $from_to->{args};
-    my ($flat, $flon, $tlat, $tlon) = @$args{qw(flat flon tlat tlon)};
-    my $query = Geo::Gosmore::Query->new(
-        flat => $flat,
-        flon => $flon,
-        tlat => $tlat,
-        tlon => $tlon,
-        fast => 1,
-        v    => 'motorcar',
-    );
-    isa_ok $query, "Geo::Gosmore::Query";
-    my $qs = "flat=${flat}&flon=${flon}&tlat=${tlat}&tlon=${tlon}&fast=1&v=motorcar";
-    cmp_ok $query->query_string, 'eq', $qs, qq[QUERY_STRING="$qs" gosmore];
+my %gosmore = (
+    binary => {
+        args => {
+            gosmore_path => $ENV{GOSMORE_PAK},
+        },
+        run_if => sub {
+            my $gosmore_pak = $ENV{GOSMORE_PAK};
+            defined $gosmore_pak and -f $gosmore_pak;
+        },
+    },
+    http => {
+        args => {
+            gosmore_method => 'http',
+            gosmore_path   => $ENV{GOSMORE_HTTP_PATH},
+        },
+        run_if => sub { $ENV{GOSMORE_HTTP_PATH} },
+    }
+);
 
-    my $route = $gosmore->route($query);
-
-    if ($from_to->{no_route}) {
-        ok(!$route, "We can't find a route");
-        next ROUTE;
+for my $test (sort keys %gosmore) {
+    my $should_run = $gosmore{$test}->{run_if}->();
+    unless ($should_run) {
+        diag "Skipping $test test";
+        next;
     }
 
+    my %args = %{ $gosmore{$test}->{args} };
+    my $gosmore = Geo::Gosmore->new(%args);
 
-    for my $value (qw(distance travel_time)) {
-        if (my $callback = $from_to->{"${value}_ok"}) {
-            my $got = $route->$value;
-            my $got_ok = $callback->($got);
-            ok($got_ok, "Got the $value of <$got> for a route, which was within bounds");
+    isa_ok $gosmore, "Geo::Gosmore";
+
+  ROUTE: for my $from_to (@from_to) {
+        my $args = $from_to->{args};
+        my ($flat, $flon, $tlat, $tlon) = @$args{qw(flat flon tlat tlon)};
+        my $query = Geo::Gosmore::Query->new(
+            flat => $flat,
+            flon => $flon,
+            tlat => $tlat,
+            tlon => $tlon,
+            fast => 1,
+            v    => 'motorcar',
+        );
+        isa_ok $query, "Geo::Gosmore::Query";
+        my $qs = "flat=${flat}&flon=${flon}&tlat=${tlat}&tlon=${tlon}&fast=1&v=motorcar";
+        cmp_ok $query->query_string, 'eq', $qs, qq[QUERY_STRING="$qs" gosmore];
+
+        my $route = $gosmore->route($query);
+
+        if ($from_to->{no_route}) {
+            ok(!$route, "We can't find a route");
+            next ROUTE;
+        }
+
+
+        for my $value (qw(distance travel_time)) {
+            if (my $callback = $from_to->{"${value}_ok"}) {
+                my $got = $route->$value;
+                my $got_ok = $callback->($got);
+                ok($got_ok, "Got the $value of <$got> for a route, which was within bounds");
+            }
         }
     }
 }
