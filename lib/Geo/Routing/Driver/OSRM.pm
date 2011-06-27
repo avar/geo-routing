@@ -3,29 +3,60 @@ use Any::Moose;
 use warnings FATAL => "all";
 use XML::Simple ();
 use Text::Trim;
+use Geo::Routing::Driver::OSRM::Route;
+use HTML::Entities qw(decode_entities);
 
 with qw(Geo::Routing::Role::Driver);
 
-use Geo::Distance::XS;
-use HTML::Entities qw(decode_entities);
-
-my $mech = WWW::Mechanize->new;
-$mech->get("http://localhost:5000/route&51.2008&-4.06348&51.4664&-3.5414");
-my $cont = $mech->content;
-#print $cont;
-
-my $xs = XML::Simple->new(
-    ForceArray => [ qw(name description) ],
-    NumericEscape => 0,
+has osrm_path => (
+    is            => 'ro',
+    isa           => 'Str',
+    required      => 1,
+    documentation => "The base URL of a HTTP with OSRM instance we can send queries to",
 );
-my $ref = $xs->XMLin($cont);
-my $parsed = parse($ref);
-print Dumper $parsed;
 
-sub parse {
-    my ($xml_simple_ref) = shift;
+has _xml_simple => (
+    is            => 'ro',
+    isa           => 'XML::Simple',
+    documentation => "Our instance of XML::Simple",
+    lazy_build    => 1,
+);
 
-    my $document = $xml_simple_ref->{Document};
+sub _build__xml_simple {
+    my ($self) = @_;
+
+    my $xs = XML::Simple->new(
+        ForceArray    => [ qw(name description) ],
+        NumericEscape => 0,
+    );
+
+    return $xs;
+}
+
+sub route {
+    my ($self, $query) = @_;
+
+    # Get the XML content
+    my $query_string = $query->query_string;
+    my $mech = $self->_mech;
+    my $url = sprintf "%s%s", $self->osrm_path, $query_string;
+    $mech->get($url);
+    my $content = $mech->content;
+
+    # Parse it
+    my $xml_simple = $self->_xml_simple;
+    my $xml = $xml_simple->XMLin($content);
+
+    # Do our own parsing
+    my $parsed = $self->_parse_data($xml);
+
+    return $parsed;
+}
+
+sub _parse_data {
+    my ($self, $xml) = @_;
+
+    my $document = $xml->{Document};
 
     # Couldn't find a route
     return unless keys %$document;
@@ -33,33 +64,42 @@ sub parse {
     my $Placemark = $document->{Placemark};
 
     my $last = $Placemark->[-1];
+    my $coordinates = $self->_parse_data_points($last);
+    my $instructions = $self->_parse_data_instructions($Placemark);
+
+    my $last_instructions = pop @$instructions;
+    my ($distance, $duration) = $last_instructions->{description} =~ /
+        Distance: \s+ ([0-9]+) .*? m
+        .*?
+        ([0-9]+) \s+ minutes
+    /x;
+
+    my $return = {
+        name         => $last_instructions->{name},
+        distance     => $distance,
+        duration     => $duration,
+        points       => $coordinates,
+        instructions => $instructions,
+    };
+
+    return $return;
+}
+
+sub _parse_data_points {
+    my ($self, $last) = @_;
+
     my $coordinates = $last->{GeometryCollection}->{LineString}->{coordinates};
     my @coordinates = map {
         my $str = $_;
         my ($lon, $lat) = split /,/, $str;
-        +{
-            longitude => $lon,
-            latitude  => $lat,
-        }
+        [ $lat, $lon ];
     } split /\s+/, $coordinates;
 
-    my $distance = 0;
+    return \@coordinates;
+}
 
-    my $geo = Geo::Distance->new;
-
-    for (my $i = 1; $i < @coordinates; $i++) {
-        my $prev_point = $coordinates[$i - 1];
-        my $curr_point = $coordinates[$i];
-
-        my ($lon1, $lat1) = @$prev_point{qw(longitude latitude)};
-        my ($lon2, $lat2) = @$curr_point{qw(longitude latitude)};
-
-        my $prev_to_curr_distance = $geo->distance(
-            kilometer => $lon1, $lat1, $lon2, $lat2,
-        );
-
-        $distance += $prev_to_curr_distance;
-    }
+sub _parse_data_instructions {
+    my ($self, $Placemark) = @_;
 
     my @instructions;
     for (my $i = 0; $i < @$Placemark; $i++) {
@@ -76,22 +116,7 @@ sub parse {
         push @instructions => $point;
     }
 
-    my $last_instructions = pop @instructions;
-    my ($distance, $duration) = $last_instructions->{description} =~ /
-        Distance: \s+ ([0-9]+) .*? m
-        .*?
-        ([0-9]+) \s+ minutes
-    /x;
-
-    print STDERR "\n", Dumper($last_instructions), "\n";
-
-    my $return = {
-        name         => $last_instructions->{name},
-        distance     => $distance,
-        duration     => $duration,
-        coordinates  => \@coordinates,
-        instructions => \@instructions,
-    };
-
-    return $return;
+    return \@instructions;
 }
+
+1;
