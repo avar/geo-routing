@@ -49,8 +49,13 @@ sub route {
 
     # Do our own parsing
     my $parsed = $self->_parse_data($xml);
+    return unless $parsed;
 
-    return $parsed;
+    my $route = Geo::Routing::Driver::OSRM::Route->new(
+        points      => $parsed->{points},
+    );
+
+    return $route;
 }
 
 sub _parse_data {

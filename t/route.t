@@ -132,12 +132,15 @@ for my $driver (sort keys %driver) {
                 next ROUTE;
             }
 
-
-            for my $value (qw(distance travel_time)) {
+            CHECK_VALUE: for my $value (qw(distance travel_time)) {
+                unless ($route->can($value)) {
+                    ok(1, "The driver $driver doesn't have a $value method, skipping");
+                    next CHECK_VALUE;
+                }
                 if (my $callback = $from_to->{"${value}_ok"}) {
                     my $got = $route->$value;
                     my $got_ok = $callback->($got);
-                    ok($got_ok, "Got the $value of <$got> for a route, which was within bounds");
+                    ok($got_ok, "$driver: Got the $value of <$got> for a route, which was within bounds");
                 }
             }
         }
