@@ -1,14 +1,8 @@
-package Geo::Gosmore::Route;
-use Any::Moose;
+package Geo::Routing::Role::Route;
+use Any::Moose '::Role';
 use warnings FATAL => "all";
 use Geo::Distance::XS;
-
-has points => (
-    is            => 'ro',
-    isa           => 'ArrayRef[ArrayRef[Undef|Num|Str]]',
-    required      => 1,
-    documentation => '',
-);
+use namespace::clean -except => "meta";
 
 has distance => (
     is            => 'ro',
