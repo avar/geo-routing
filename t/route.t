@@ -73,7 +73,14 @@ my %driver = (
             run_if => sub { $ENV{GOSMORE_HTTP_PATH} },
         }
     ],
-    OSRM => [],
+    OSRM => [
+        {
+            args => {
+                osrm_path => $ENV{OSRM_HTTP_PATH},
+            },
+            run_if => sub { $ENV{OSRM_HTTP_PATH} },
+        }
+    ],
 );
 
 for my $driver (sort keys %driver) {
@@ -113,6 +120,9 @@ for my $driver (sort keys %driver) {
             if ($driver eq 'Gosmore') {
                 my $qs = "flat=${flat}&flon=${flon}&tlat=${tlat}&tlon=${tlon}&fast=1&v=motorcar";
                 cmp_ok $query->query_string, 'eq', $qs, qq[QUERY_STRING="$qs" gosmore];
+            } elsif ($driver eq 'OSRM') {
+                my $qs = "&${flat}&${flon}&${tlat}&${tlon}";
+                cmp_ok $query->query_string, 'eq', $qs, qq[http://localhost:5000/route$qs];
             }
 
             my $route = $routing->route($query);
