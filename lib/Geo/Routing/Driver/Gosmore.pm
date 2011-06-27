@@ -5,6 +5,7 @@ use warnings FATAL => "all";
 use autodie qw(:all);
 use File::Basename qw(dirname);
 use Cwd qw(getcwd);
+use Geo::Gosmore::Route;
 
 with qw(Geo::Routing::Role::Driver);
 
@@ -108,5 +109,73 @@ sub _build__gosmore_dirname {
 
     return $gosmore_dirname;
 }
+
+sub route {
+    my ($self, $query) = @_;
+
+    my $lines = $self->_get_normalized_routing_lines($query);
+
+    my @points;
+    for my $line (@$lines) {
+        # We couldn't find a route
+        return if $line eq 'No route found';
+
+        print STDERR "$line\n" if $ENV{DEBUG};
+
+        # We're getting a stream of lat/lon values
+        next unless $line =~ /^[0-9]/;
+
+        my ($lat, $lon, $junction_type, $style, $remaining_time, $name) = split /,/, $line;
+        push @points => [ $lat, $lon, $junction_type, $style, $remaining_time, $name ];
+    }
+
+    my $route = Geo::Gosmore::Route->new(
+        points => \@points,
+    );
+
+    return $route;
+}
+
+sub _get_normalized_routing_lines {
+    my ($self, $query) = @_;
+
+    my $method = $self->gosmore_method;
+    my @lines;
+
+    my $query_string = $query->query_string;
+    if ($method eq 'binary') {
+        my $gosmore_dirname = $self->_gosmore_dirname;
+
+        local $ENV{QUERY_STRING} = $query_string;
+        local $ENV{LC_NUMERIC} = "en_US";
+        my $current_dirname = getcwd();
+        chdir $gosmore_dirname;
+        open my $gosmore, "gosmore |";
+        chdir $current_dirname;
+
+        while (my $line = <$gosmore>) {
+            # Skip the HTTP header
+            next if $. == 1 || $. == 2;
+
+            $line =~ s/[[:cntrl:]]//g;
+
+            push @lines => $line;
+        }
+
+    } elsif ($method eq 'http') {
+        my $mech = $self->_mech;
+        my $url = sprintf "%s?%s", $self->gosmore_path, $query_string;
+        $mech->get($url);
+        my $content = $mech->content;
+        use Data::Dumper;
+        @lines = map {
+            s/[[:cntrl:]]//g;
+            $_;
+        } split /\n/, $content;
+    }
+
+    return \@lines;
+}
+
 
 1;

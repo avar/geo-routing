@@ -8,10 +8,10 @@ use_ok 'Geo::Routing';
 my @from_to = (
     {
         args => {
-            flat => '51.5425',
-            flon => '-0.111',
-            tlat => '51.5614',
-            tlon => '-0.0466',
+            from_latitude  => '51.5425',
+            from_longitude => '-0.111',
+            to_latitude    => '51.5614',
+            to_longitude    => '-0.0466',
         },
         distance_ok => sub {
             my ($distance) = @_;
@@ -26,10 +26,10 @@ my @from_to = (
     },
     {
         args => {
-            flat => '51.5425',
-            flon => '-0.111',
-            tlat => '52.325',
-            tlon => '1.317',
+            from_latitude  => '51.5425',
+            from_longitude => '-0.111',
+            to_latitude    => '52.325',
+            to_longitude   => '1.317',
         },
         distance_ok => sub {
             my ($distance) = @_;
@@ -44,10 +44,10 @@ my @from_to = (
     },
     {
         args => {
-            flat => '52.75929',
-            flon => '-4.7844',
-            tlat => '52.7996',
-            tlon => '-4.7368',
+            from_latitude  => '52.75929',
+            from_longitude => '-4.7844',
+            to_latitude    => '52.7996',
+            to_longitude   => '-4.7368',
         },
         no_route => 1,
     }
@@ -81,7 +81,7 @@ for my $driver (sort keys %driver) {
     for my $test (@{ $driver{$driver} }) {
         my $should_run = $test->{run_if}->();
         unless ($should_run) {
-            diag "Skipping $test test";
+            diag "Skipping a $driver test";
             next;
         }
 
@@ -89,27 +89,31 @@ for my $driver (sort keys %driver) {
             driver      => $driver,
             driver_args => $test->{args},
         );
-        print STDERR Dumper \%args;
         my $routing = Geo::Routing->new(%args);
 
-        print STDERR Dumper $routing;
 
         isa_ok $routing, "Geo::Routing";
 
       ROUTE: for my $from_to (@from_to) {
             my $args = $from_to->{args};
-            my ($flat, $flon, $tlat, $tlon) = @$args{qw(flat flon tlat tlon)};
+            my ($flat, $flon, $tlat, $tlon) = @$args{qw(from_latitude from_longitude to_latitude to_longitude)};
             my $query = $routing->query(
-                flat => $flat,
-                flon => $flon,
-                tlat => $tlat,
-                tlon => $tlon,
-                fast => 1,
-                v    => 'motorcar',
+                from_latitude  => $flat,
+                from_longitude => $flon,
+                to_latitude    => $tlat,
+                to_longitude   => $tlon,
+                ($driver eq 'Gosmore'
+                 ? (
+                     fast      => 1,
+                     v         => 'motorcar'
+                 )
+                 : ()),
             );
-            isa_ok $query, "Geo::Gosmore::Query";
-            my $qs = "flat=${flat}&flon=${flon}&tlat=${tlat}&tlon=${tlon}&fast=1&v=motorcar";
-            cmp_ok $query->query_string, 'eq', $qs, qq[QUERY_STRING="$qs" gosmore];
+            isa_ok $query, "Geo::Routing::Driver::${driver}::Query";
+            if ($driver eq 'Gosmore') {
+                my $qs = "flat=${flat}&flon=${flon}&tlat=${tlat}&tlon=${tlon}&fast=1&v=motorcar";
+                cmp_ok $query->query_string, 'eq', $qs, qq[QUERY_STRING="$qs" gosmore];
+            }
 
             my $route = $routing->route($query);
 
