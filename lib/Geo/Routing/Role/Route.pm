@@ -4,6 +4,13 @@ use warnings FATAL => "all";
 use Geo::Distance::XS;
 use namespace::clean -except => "meta";
 
+has points => (
+    is            => 'ro',
+    isa           => 'ArrayRef[ArrayRef[Num|Undef|Str]]',
+    required      => 1,
+    documentation => '',
+);
+
 has distance => (
     is            => 'ro',
     isa           => 'Num',

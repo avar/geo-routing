@@ -5,7 +5,7 @@ use warnings FATAL => "all";
 use autodie qw(:all);
 use File::Basename qw(dirname);
 use Cwd qw(getcwd);
-use Geo::Gosmore::Route;
+use Geo::Routing::Driver::Gosmore::Route;
 
 with qw(Geo::Routing::Role::Driver);
 
@@ -129,7 +129,7 @@ sub route {
         push @points => [ $lat, $lon, $junction_type, $style, $remaining_time, $name ];
     }
 
-    my $route = Geo::Gosmore::Route->new(
+    my $route = Geo::Routing::Driver::Gosmore::Route->new(
         points => \@points,
     );
 

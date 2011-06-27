@@ -77,7 +77,7 @@ my %driver = (
 );
 
 for my $driver (sort keys %driver) {
-    diag "Testing the $driver driver";
+    ok 1, "Testing the $driver driver";
     for my $test (@{ $driver{$driver} }) {
         my $should_run = $test->{run_if}->();
         unless ($should_run) {
