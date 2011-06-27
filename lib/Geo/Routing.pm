@@ -11,6 +11,11 @@ use Class::Load qw(load_class);
 
 Geo::Routing - Interface to the L<gosmore(1)> and L<OSRM|http://routed.sourceforge.net/> routing libraries
 
+=head1 DESCRIPTION
+
+This is experimental software with an unstable API. It'll be better
+soon, but for now don't trust anything here.
+
 =head1 ATTRIBUTES
 
 =cut
