@@ -4,13 +4,6 @@ use warnings FATAL => "all";
 
 with 'Geo::Routing::Role::Route';
 
-has travel_time => (
-    is            => 'ro',
-    isa           => 'Int',
-    documentation => '',
-    lazy_build    => 1,
-);
-
 sub _build_travel_time {
     my ($self) = @_;
 

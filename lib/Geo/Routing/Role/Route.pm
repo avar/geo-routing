@@ -42,4 +42,13 @@ sub _build_distance {
     return $distance;
 }
 
+has travel_time => (
+    is            => 'ro',
+    isa           => 'Int',
+    documentation => '',
+    lazy_build    => 1,
+);
+
+requires '_build_travel_time';
+
 1;
