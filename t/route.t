@@ -28,6 +28,17 @@ my @from_to = (
     },
     {
         args => {
+            from_latitude  => '56.6242263731532',
+            from_longitude => '-6.06496810913086',
+            to_latitude    => '57.4131709956085',
+            to_longitude   => '-6.19028091430664',
+        },
+#        distance_ok => [ 155, 230 ],
+#        travel_time_ok => [ 5000, 8000 ],
+    },
+
+    {
+        args => {
             from_latitude  => '52.75929',
             from_longitude => '-4.7844',
             to_latitude    => '52.7996',
@@ -116,12 +127,8 @@ for my $driver (sort keys %driver) {
                 next ROUTE;
             }
 
-            CHECK_VALUE: for my $value (qw(distance travel_time)) {
-                unless ($route->can($value)) {
-                    ok(1, "The driver $driver doesn't have a $value method, skipping");
-                    next CHECK_VALUE;
-                }
-                if (my ($from, $to) = @{ $from_to->{"${value}_ok"} }) {
+            for my $value (qw(distance travel_time)) {
+                if (my ($from, $to) = @{ $from_to->{"${value}_ok"} || [] }) {
                     my $got = $route->$value;
                     cmp_ok $got, ">=", $from, "$driver: Got the <$value> of <$got> for a route, which is at least <$from>";
                     cmp_ok $got, "<=", $to, "$driver: Got the <$value> of <$got> for a route, which is at most <$to>";
