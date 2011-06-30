@@ -2,6 +2,13 @@ Revision history for Geo::Routing (previously Geo::Gosmore)
 
 {{$NEXT}}
 
+    - Use my own ad-hoc regexp powered XML parser instead of
+      XML::Simple by default. This cut down cpu time in production
+      from 40% per process to 5%.
+
+    - Use curl instead of WWW::Mechanize. Makes it easier to see which
+      process is waiting for what in top(1).
+
 0.07 2011-06-28 14:03:21
 
     - OSRM can now return the distance & time in the correct format.
