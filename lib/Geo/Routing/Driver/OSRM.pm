@@ -15,6 +15,20 @@ has osrm_path => (
     documentation => "The base URL of a HTTP with OSRM instance we can send queries to",
 );
 
+has use_curl => (
+    is            => 'ro',
+    isa           => 'Bool',
+    default       => 1,
+    documentation => "Should we shell out to curl(1) to get http content?",
+);
+
+has complex_parsing => (
+    is            => 'ro',
+    isa           => 'Bool',
+    default       => 0,
+    documentation => "Should we try to parse out data that we probably don't need?",
+);
+
 has _xml_simple => (
     is            => 'ro',
     isa           => 'XML::Simple',
@@ -40,16 +54,43 @@ sub route {
     my $query_string = $query->query_string;
     my $mech = $self->_mech;
     my $url = sprintf "%s%s", $self->osrm_path, $query_string;
-    $mech->get($url);
-    my $content = $mech->content;
+    my $content;
+    if ($self->use_curl) {
+        chomp($content = qx[curl -s '$url']);
+    } else {
+        $mech->get($url);
+        $content = $mech->content;
+    }
 
-    # Parse it
-    my $xml_simple = $self->_xml_simple;
-    my $xml = $xml_simple->XMLin($content);
+    my $parsed;
+    if ($self->complex_parsing) {
+        # Parse it
+        my $xml_simple = $self->_xml_simple;
+        my $xml = $xml_simple->XMLin($content);
 
-    # Do our own parsing
-    my $parsed = $self->_parse_data($xml);
-    return unless $parsed;
+        # Do our own parsing
+        $parsed = $self->_parse_data($xml);
+        return unless $parsed;
+    } else {
+        if ($content =~ m[<Document>\s*</Document>]s) {
+            return;
+        }
+
+        my ($coordinates_str) = $content =~ m[<coordinates>([^<]+)</coordinates>]s;
+        my $coordinates = $self->_parse_data_points($coordinates_str);
+
+        my ($distance, $duration) = $content =~ /
+            Distance: \s+ ([0-9]+) .*? m
+            .*?
+            ([0-9]+) \s+ minutes
+        /x;
+
+        $parsed = {
+            distance     => ($distance / 1000),
+            travel_time  => ($duration * 60),
+            points       => $coordinates,
+        };
+    }
 
     my $route = Geo::Routing::Driver::OSRM::Route->new(%$parsed);
 
@@ -67,15 +108,12 @@ sub _parse_data {
     my $Placemark = $document->{Placemark};
 
     my $last = $Placemark->[-1];
-    my $coordinates = $self->_parse_data_points($last);
+    my $coordinates_str = $last->{GeometryCollection}->{LineString}->{coordinates};
+    my $coordinates = $self->_parse_data_points($coordinates_str);
     my $instructions = $self->_parse_data_instructions($Placemark);
 
     my $last_instructions = pop @$instructions;
-    my ($distance, $duration) = $last_instructions->{description} =~ /
-        Distance: \s+ ([0-9]+) .*? m
-        .*?
-        ([0-9]+) \s+ minutes
-    /x;
+    my ($distance, $duration) = $self->_parse_distance_and_duration_from_description($last_instructions->{description});
 
     my $return = {
         name         => $last_instructions->{name},
@@ -89,16 +127,27 @@ sub _parse_data {
 }
 
 sub _parse_data_points {
-    my ($self, $last) = @_;
+    my ($self, $coordinates_str) = @_;
 
-    my $coordinates = $last->{GeometryCollection}->{LineString}->{coordinates};
     my @coordinates = map {
         my $str = $_;
         my ($lon, $lat) = split /,/, $str;
         [ $lat, $lon ];
-    } split /\s+/, $coordinates;
+    } split /\s+/, $coordinates_str;
 
     return \@coordinates;
+}
+
+sub _parse_distance_and_duration_from_description {
+    my ($self, $description) = @_;
+
+    my ($distance, $duration) = $description =~ /
+        Distance: \s+ ([0-9]+) .*? m
+        .*?
+        ([0-9]+) \s+ minutes
+    /x;
+
+    return ($distance, $duration);
 }
 
 sub _parse_data_instructions {
