@@ -2,6 +2,8 @@ Revision history for Geo::Routing (previously Geo::Gosmore)
 
 {{$NEXT}}
 
+0.08 2011-06-30 12:12:09
+
     - Use my own ad-hoc regexp powered XML parser instead of
       XML::Simple by default. This cut down cpu time in production
       from 40% per process to 5%.
