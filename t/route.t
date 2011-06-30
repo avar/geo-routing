@@ -117,7 +117,7 @@ for my $driver (sort keys %driver) {
                 cmp_ok $query->query_string, 'eq', $qs, qq[QUERY_STRING="$qs" gosmore];
             } elsif ($driver eq 'OSRM') {
                 my $qs = "&${flat}&${flon}&${tlat}&${tlon}";
-                cmp_ok $query->query_string, 'eq', $qs, qq[$ENV{OSRM_HTTP_PATH}/route$qs];
+                cmp_ok $query->query_string, 'eq', $qs, qq[$ENV{OSRM_HTTP_PATH}$qs];
             }
 
             my $route = $routing->route($query);
