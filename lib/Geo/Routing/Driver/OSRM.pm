@@ -30,7 +30,7 @@ sub route {
     my $url = sprintf "%s%s", $self->osrm_path, $query_string;
     my $content;
     if ($self->use_curl) {
-        chomp($content = qx[curl --proxy "" -s '$url']);
+        chomp($content = qx[curl -s '$url']);
     } else {
         $mech->get($url);
         $content = $mech->content;
