@@ -2,6 +2,8 @@ Revision history for Geo::Routing (previously Geo::Gosmore)
 
 {{$NEXT}}
 
+0.09 2011-07-26 22:57:34
+
     - Switch from XML parsing for OSRM to using JSON::XS. Eliminates
       the entire need for parsing things, and makes things faster.
 
