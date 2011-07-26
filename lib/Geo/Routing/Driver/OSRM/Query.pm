@@ -9,7 +9,7 @@ sub query_string {
 
     my @atoms = qw(from_latitude from_longitude to_latitude to_longitude);
 
-    my $query_string = '&' . join '&', map { $self->$_ } @atoms;
+    my $query_string = '&output=json&' . join '&', map { $self->$_ } @atoms;
 
     return $query_string;
 }

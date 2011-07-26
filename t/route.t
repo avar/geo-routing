@@ -23,7 +23,7 @@ my @from_to = (
             to_latitude    => '52.325',
             to_longitude   => '1.317',
         },
-        distance_ok => [ 155, 230 ],
+        distance_ok => [ 150, 230 ],
         travel_time_ok => [ 5000, 8000 ],
     },
     {
@@ -33,7 +33,7 @@ my @from_to = (
             to_latitude    => '57.4131709956085',
             to_longitude   => '-6.19028091430664',
         },
-#        distance_ok => [ 155, 230 ],
+#        distance_ok => [ 150, 230 ],
 #        travel_time_ok => [ 5000, 8000 ],
     },
 
@@ -116,7 +116,7 @@ for my $driver (sort keys %driver) {
                 my $qs = "flat=${flat}&flon=${flon}&tlat=${tlat}&tlon=${tlon}&fast=1&v=motorcar";
                 cmp_ok $query->query_string, 'eq', $qs, qq[QUERY_STRING="$qs" gosmore];
             } elsif ($driver eq 'OSRM') {
-                my $qs = "&${flat}&${flon}&${tlat}&${tlon}";
+                my $qs = "&output=json&${flat}&${flon}&${tlat}&${tlon}";
                 cmp_ok $query->query_string, 'eq', $qs, qq[$ENV{OSRM_HTTP_PATH}$qs];
             }
 
