@@ -120,8 +120,11 @@ for my $driver (sort keys %driver) {
                 cmp_ok $query->query_string, 'eq', $qs, qq[QUERY_STRING="$qs" gosmore];
             } elsif ($driver eq 'OSRM') {
                 my $query_method = $test->{args}->{query_method};
-                my $qs = "&output=$query_method&instructions=true&geometry=false&${flat}&${flon}&${tlat}&${tlon}";
-                cmp_ok $query->query_string($query_method), 'eq', $qs, qq[$ENV{OSRM_HTTP_PATH}$qs];
+                my $qs = $query->query_string($query_method);
+                like
+                    $qs,
+                    qr/^&output=$query_method.*?&${flat}&${flon}&${tlat}&${tlon}/,
+                    qq[$ENV{OSRM_HTTP_PATH}$qs];
             }
 
             my $route = $routing->route($query);
