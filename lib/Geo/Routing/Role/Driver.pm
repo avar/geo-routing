@@ -15,9 +15,18 @@ has _mech => (
 sub _build__mech {
     my ($self) = @_;
 
-    WWW::Mechanize->new(
+    my $mech = WWW::Mechanize->new(
         user_agent => __PACKAGE__,
+        proxy => '',
     );
+
+    $mech->default_header(
+        'Accept-Encoding' => "gzip,deflate",
+        'Keep-Alive' => "300",
+        'Connection' => "keep-alive",
+    );
+
+    return $mech;
 }
 
 1;
