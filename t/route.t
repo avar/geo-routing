@@ -69,12 +69,15 @@ my %driver = (
         }
     ],
     OSRM => [
-        {
-            args => {
-                osrm_path => $ENV{OSRM_HTTP_PATH},
-            },
-            run_if => sub { $ENV{OSRM_HTTP_PATH} },
-        }
+        map {
+            +{
+                args => {
+                    osrm_path => $ENV{OSRM_HTTP_PATH},
+                    query_method => $_,
+                },
+                run_if => sub { $ENV{OSRM_HTTP_PATH} },
+            }
+        } qw(xml json)
     ],
 );
 
@@ -116,8 +119,9 @@ for my $driver (sort keys %driver) {
                 my $qs = "flat=${flat}&flon=${flon}&tlat=${tlat}&tlon=${tlon}&fast=1&v=motorcar";
                 cmp_ok $query->query_string, 'eq', $qs, qq[QUERY_STRING="$qs" gosmore];
             } elsif ($driver eq 'OSRM') {
-                my $qs = "&output=json&${flat}&${flon}&${tlat}&${tlon}";
-                cmp_ok $query->query_string, 'eq', $qs, qq[$ENV{OSRM_HTTP_PATH}$qs];
+                my $query_method = $test->{args}->{query_method};
+                my $qs = "&output=$query_method&instructions=false&geometry=false&${flat}&${flon}&${tlat}&${tlon}";
+                cmp_ok $query->query_string($query_method), 'eq', $qs, qq[$ENV{OSRM_HTTP_PATH}$qs];
             }
 
             my $route = $routing->route($query);
