@@ -51,9 +51,11 @@ sub route {
         $content = $mech->content;
     }
 
+    return unless $content;
+
     my $parsed;
     if ($method eq 'xml') {
-        if (!$content or $content =~ m[<Document>\s*</Document>]s) {
+        if ($content =~ m[<Document>\s*</Document>]s) {
             return;
         }
 
