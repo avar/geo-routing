@@ -6,6 +6,7 @@ with 'Geo::Routing::Role::Query';
 
 sub query_string {
     my ($self, $method) = @_;
+    $method ||= "json";
 
     my @atoms = qw(from_latitude from_longitude to_latitude to_longitude);
 

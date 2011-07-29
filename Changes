@@ -2,6 +2,9 @@ Revision history for Geo::Routing (previously Geo::Gosmore)
 
 {{$NEXT}}
 
+    - Alter the OSRM query_string method to use the json protocol by
+      default.
+
 0.10 2011-07-28 11:35:27
 
     - Support both XML and JSON query methods to OSRM for debugging
